@@ -134,7 +134,7 @@ workflow cnvkit_get_coverages {
   # specify workflow outputs. in this case, the coverage files for
   # anti targets and targets
   output {
-    Array[File] input_bams = input_bams
+    Array[File] prepd_bams = input_bams
     Array[File] target_coverages = cnvkit_target_coverage.coverage_out
     Array[File] antitarget_coverages = cnvkit_anti_coverage.coverage_out
   }
