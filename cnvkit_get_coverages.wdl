@@ -135,7 +135,7 @@ workflow cnvkit_get_coverages {
   # anti targets and targets
   output {
     Array[File] target_coverages = cnvkit_target_coverage.coverage_out
-    Array[File] target_anticoverages = cnvkit_anti_coverage.coverage_out
+    Array[File] antitarget_coverages = cnvkit_anti_coverage.coverage_out
   }
 }
 
