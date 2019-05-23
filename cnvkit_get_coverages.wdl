@@ -74,13 +74,22 @@ workflow cnvkit_get_coverages {
             assembly_fa=assembly_fa,
             gaps=gaps
   }
+  
+  ## fix mappable regions chromosome formats
+  call flatfile_fix_chrs {
+    input: cnvkit_docker=cnvkit_docker,
+            input=cnvkit_access.mappable_regions_out,
+            sed_path=sed_path,
+            output="mappable-regions-fixed.bed"
+  }
+  
 
   ## generate annotated anti-targets file (1 per PON)
   call cnvkit_antitarget {
     input: cnvkit_docker=cnvkit_docker,
             cnvkit_path=cnvkit_path,
             targets=cnvkit_target.targets_out,
-            mappable_regions=cnvkit_access.mappable_regions_out,
+            mappable_regions=flatfile_fix_chrs.corrected_file,
             antitargets="wxs_anti-targets.bed"
   }
 
@@ -280,6 +289,32 @@ task samtools_fix_chrs {
     File fmttd_bam_out = fmttd_bam
   }
 
+}
+
+#--------------------------------------
+# run sed to fix mappable regions 
+task flatfile_fix_chrs {
+
+  # input variables 
+  File input
+  String sed_path
+  String cnvkit_docker
+  String output
+  
+  # fix chrs with sed command 
+  command {
+    ${sed_path} 's/1/chr1/' ${input} > ${output}
+  }
+  
+  # runtime using cnvkit docker
+  runtime {
+    docker: cnvkit_docker
+  }
+
+  # specify outputs
+  output {
+    File corrected_file = output
+  }
 }
 
 #--------------------------------------
