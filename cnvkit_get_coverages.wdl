@@ -78,9 +78,9 @@ workflow cnvkit_get_coverages {
   ## fix mappable regions chromosome formats
   call flatfile_fix_chrs {
     input: cnvkit_docker=cnvkit_docker,
-            input=cnvkit_access.mappable_regions_out,
+            inputfile=cnvkit_access.mappable_regions_out,
             sed_path=sed_path,
-            output="mappable-regions-fixed.bed"
+            outputfile="mappable-regions-fixed.bed"
   }
   
 
@@ -296,14 +296,14 @@ task samtools_fix_chrs {
 task flatfile_fix_chrs {
 
   # input variables 
-  File input
+  File inputfile
   String sed_path
   String cnvkit_docker
-  String output
+  String outputfile
   
   # fix chrs with sed command 
   command {
-    ${sed_path} 's/1/chr1/' ${input} > ${output}
+    ${sed_path} 's/1/chr1/' ${inputfile} > ${outputfile}
   }
   
   # runtime using cnvkit docker
@@ -313,7 +313,7 @@ task flatfile_fix_chrs {
 
   # specify outputs
   output {
-    File corrected_file = output
+    File corrected_file = outputfile
   }
 }
 
