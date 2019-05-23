@@ -74,43 +74,20 @@ workflow cnvkit_get_coverages {
             assembly_fa=assembly_fa,
             gaps=gaps
   }
-  
-  ## fix mappable regions chromosome formats
-  call flatfile_fix_chrs {
-    input: cnvkit_docker=cnvkit_docker,
-            inputfile=cnvkit_access.mappable_regions_out,
-            sed_path=sed_path,
-            outputfile="mappable-regions-fixed.bed"
-  }
-  
+    
 
   ## generate annotated anti-targets file (1 per PON)
   call cnvkit_antitarget {
     input: cnvkit_docker=cnvkit_docker,
             cnvkit_path=cnvkit_path,
             targets=cnvkit_target.targets_out,
-            mappable_regions=flatfile_fix_chrs.corrected_file,
+            mappable_regions=cnvkit_access.mappable_regions_out,
             antitargets="wxs_anti-targets.bed"
   }
 
-  ## parallelize the optional fix_chrs if set to true
-  if (fix_chrs) {
-    scatter (b in bam_map) {
-      call samtools_fix_chrs {
-        input: cnvkit_docker=cnvkit_docker,
-                samtools_path=samtools_path,
-                sed_path=sed_path,
-                samtools_mem_gb=samtools_mem_gb,
-                samtools_disk_gb=samtools_disk_gb,
-                unfmtted_bam=b.right,
-                fmttd_bam=b.left + "-fmttd.bam"
-      }
-    }
-  }
 
   ## resolve branched execution
-  Array[File] input_bams = select_first([samtools_fix_chrs.fmttd_bam_out, bamfiles])
-  Array[Pair[String,File]] input_bam_map = zip(sample_ids, input_bams)
+  Array[Pair[String,File]] input_bam_map = zip(sample_ids, bamfiles)
 
   ## run coverage and anticoverage on formatted bams
   scatter(s in input_bam_map) {
@@ -143,7 +120,6 @@ workflow cnvkit_get_coverages {
   # specify workflow outputs. in this case, the coverage files for
   # anti targets and targets
   output {
-    Array[File] prepd_bams = input_bams
     Array[File] target_coverages = cnvkit_target_coverage.coverage_out
     Array[File] antitarget_coverages = cnvkit_anti_coverage.coverage_out
   }
@@ -251,69 +227,6 @@ task cnvkit_antitarget {
   # specify outputs, which here are the anti-target sites
   output {
     File antitargets_out = antitargets
-  }
-}
-
-#--------------------------------------
-# run samtools reheader task to change bams from 1-22+X indexed to chr1-chr22
-# + chrX indexed
-task samtools_fix_chrs {
-  #input variables
-  File unfmtted_bam
-  Int samtools_mem_gb
-  Int samtools_disk_gb
-  String fmttd_bam
-  String cnvkit_docker
-  String samtools_path
-  String sed_path
-
-  # run the piped command using samtools and sed
-  command {
-      # run samtools sed pipe to reheader the bam file
-      ${samtools_path} view -H ${unfmtted_bam} | \
-        ${sed_path}  -e 's/SN:\([0-9XY]*\)/SN:chr\1/' -e 's/SN:MT/SN:chrM/' | \
-        ${samtools_path} reheader - ${unfmtted_bam} > ${fmttd_bam}
-  }
-
-  # specify runtime environment. see cnvkit_target runtime comments for
-  # further specification on docker container
-  runtime {
-    docker: cnvkit_docker
-    memory: samtools_mem_gb + "G"
-    disks: "local-disk " + samtools_disk_gb + " HDD"
-    bootDiskSizeGb: 50
-  }
-
-  # specify outputs, here a reheadered bam file
-  output {
-    File fmttd_bam_out = fmttd_bam
-  }
-
-}
-
-#--------------------------------------
-# run sed to fix mappable regions 
-task flatfile_fix_chrs {
-
-  # input variables 
-  File inputfile
-  String sed_path
-  String cnvkit_docker
-  String outputfile
-  
-  # fix chrs with sed command 
-  command {
-    ${sed_path} 's/^/chr/' ${inputfile} > ${outputfile}
-  }
-  
-  # runtime using cnvkit docker
-  runtime {
-    docker: cnvkit_docker
-  }
-
-  # specify outputs
-  output {
-    File corrected_file = outputfile
   }
 }
 
