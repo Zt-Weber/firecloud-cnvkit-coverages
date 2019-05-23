@@ -303,7 +303,7 @@ task flatfile_fix_chrs {
   
   # fix chrs with sed command 
   command {
-    ${sed_path} 's/1/chr1/' ${inputfile} > ${outputfile}
+    ${sed_path} 's/^/chr/' ${inputfile} > ${outputfile}
   }
   
   # runtime using cnvkit docker
